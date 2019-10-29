@@ -23,7 +23,7 @@ typedef struct {
 	uint8_t idIn;
 	uint8_t idOut;
 	uint8_t nbElement;
-	spinlock_t *buffer_lock;
+	spinlock_t buffer_lock;
 }buffer;
 
 typedef struct {
@@ -141,11 +141,11 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 	
 	for(i = 0; i<count;++i) 
 	{
-		spin_lock(module->Rxbuf.buffer_lock);
+		spin_lock(&(module->Rxbuf.buffer_lock));
 	
 		while(module->Rxbuf.nbElement <= 0)
 		{
-			spin_unlock(module->Rxbuf.buffer_lock); 
+			spin_unlock(&(module->Rxbuf.buffer_lock)); 
 			if(filp->f_flags & O_NONBLOCK)
 			{
 				if(i == 0){
@@ -164,11 +164,11 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 			else
 			{
 				wait_event_interruptible(module->waitRx,module->Rxbuf.nbElement > 0);
-				spin_lock(module->Rxbuf.buffer_lock);
+				spin_lock(&(module->Rxbuf.buffer_lock));
 			}
 		}
 		read_buffer(&BufR[i],&(module->Rxbuf));
-		spin_unlock(module->Rxbuf.buffer_lock);
+		spin_unlock(&(module->Rxbuf.buffer_lock));
 
 	}
 	
@@ -195,11 +195,11 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 
 	for(i = 0;i<count ; ++i){
 		
-		spin_lock(module->Wxbuf.buffer_lock);
+		spin_lock(&(module->Wxbuf.buffer_lock));
 	
 		while(module->Wxbuf.nbElement >= module->Wxbuf.size)
 		{
-			spin_unlock(module->Wxbuf.buffer_lock);
+			spin_unlock(&(module->Wxbuf.buffer_lock));
 			if(filp->f_flags & O_NONBLOCK)
 			{
 				if(i == 0){ 
@@ -212,11 +212,11 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 			else
 			{
 				wait_event_interruptible(module->waitTx,module->Wxbuf.nbElement <module->Wxbuf.size);
-				spin_lock(module->Wxbuf.buffer_lock);
+				spin_lock(&(module->Wxbuf.buffer_lock));
 			}
 		}
 		write_buffer(BufW[i],&(module->Wxbuf));
-		spin_unlock(module->Wxbuf.buffer_lock);
+		spin_unlock(&(module->Wxbuf.buffer_lock));
 	}
 	
 	return count;
@@ -230,7 +230,7 @@ static void init_buffer(uint8_t size, buffer *buff){
 	buff->idOut = 0;
 	buff->nbElement = 0;
 	buff->buffer= kmalloc(sizeof(uint8_t)*size, GFP_KERNEL);
-	spin_lock_init(buff->buffer_lock);
+	spin_lock_init(&(buff->buffer_lock));
 }
 
 static void read_buffer(uint8_t* tempo, buffer *buff){
