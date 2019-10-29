@@ -45,6 +45,8 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 static void init_buffer(uint8_t size, buffer *buff);
 static void read_buffer(uint8_t* tempo, buffer *buff);
 static void write_buffer(uint8_t tempo, buffer *buff);
+static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t size);
+static int get_buffer_size(buffer *buff);
 
 struct file_operations monModule_fops = {
 	.owner   = THIS_MODULE,
@@ -70,8 +72,8 @@ static int __init pilote_serie_init (void){
 	device_create(device.cclass,NULL,device.dev,NULL,"SerialDev0");
 	device.wr_mod = 0;
 	device.rd_mod = 0;
-	init_buffer(16,&(device.Wxbuf));
-	init_buffer(16,&(device.Rxbuf));
+	init_buffer(200,&(device.Wxbuf));
+	init_buffer(200,&(device.Rxbuf));
 	init_waitqueue_head(&(device.waitRx));
 	init_waitqueue_head(&(device.waitTx));
 	cdev_init(&(device.mycdev), &monModule_fops);
@@ -133,93 +135,106 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 {
 	monModule *module = (monModule*)filp->private_data;
 	int nb_byte_max = 8;
-	uint8_t BufR[(int)count];
+	uint8_t BufR[nb_byte_max];
+	int nb_data_read = 0;
 	int i;
-
-	count = min(nb_byte_max,(int)count);
 	
-	
-	for(i = 0; i<count;++i) 
-	{
-		spin_lock(&(module->Wxbuf.buffer_lock));
-	
-		while(module->Wxbuf.nbElement <= 0)
-		{
-			spin_unlock(&(module->Wxbuf.buffer_lock)); 
-			if(filp->f_flags & O_NONBLOCK)
+	while(nb_data_read < count){
+		
+		for(i = 0; i< min((int)count-nb_data_read,nb_byte_max);++i){
+		
+			spin_lock_irq(&(module->Wxbuf.buffer_lock));
+		
+			while(module->Wxbuf.nbElement <= 0)
 			{
-				if(i == 0){
-					
-					return -EAGAIN;
-				}
-				else{
-				    if(copy_to_user(buf,BufR,i))
-					{
-						printk(KERN_ALERT" Read error copy to user");
+				spin_unlock(&(module->Wxbuf.buffer_lock)); 
+				if(filp->f_flags & O_NONBLOCK)
+				{
+					if(nb_data_read == 0){
+						
 						return -EAGAIN;
 					}
-					return i;
-				}					
+					else{
+						if(copy_to_user(buf,BufR,i))
+						{
+							printk(KERN_ALERT" Read error copy to user");
+							return -EAGAIN;
+						}
+						nb_data_read += i;
+						return nb_data_read;
+					}					
+				}
+				else
+				{
+					wait_event_interruptible(module->waitRx,module->Wxbuf.nbElement > 0);
+					spin_lock_irq(&(module->Wxbuf.buffer_lock));
+				}
 			}
-			else
-			{
-				wait_event_interruptible(module->waitRx,module->Wxbuf.nbElement > 0);
-				spin_lock(&(module->Wxbuf.buffer_lock));
-			}
+		
+			read_buffer(&BufR[i],&(module->Wxbuf));
+			spin_unlock(&(module->Wxbuf.buffer_lock));
 		}
-		read_buffer(&BufR[i],&(module->Wxbuf));
-		spin_unlock(&(module->Wxbuf.buffer_lock));
-
+		if(copy_to_user(&buf[nb_data_read],BufR,i)){
+			printk(KERN_ALERT" Read error copy to user");
+			return -EAGAIN;
+		}
+		nb_data_read += i;
 	}
-	
-	if(copy_to_user(buf,BufR,count)){
-		printk(KERN_ALERT" Read error copy to user");
-		return -EAGAIN;
-	}
-    return count; 
+    return nb_data_read; 
 }
 
 static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
 
-    	monModule *module = (monModule*)filp->private_data;
+    monModule *module = (monModule*)filp->private_data;
 	int nb_byte_max = 8;
+	int nb_data_write = 0;
 	uint8_t BufW[count];
+    int nb_a_transmettre;
 	int i;
+
 	
-	count = min(nb_byte_max,(int)count);
 
-	if(copy_from_user(BufW,buf,count)){
-		printk(KERN_ALERT"Write error copy from user");
-		return -EAGAIN;
-	}
-
-	for(i = 0;i<count ; ++i){
+	
+	while(nb_data_write < count){
 		
-		spin_lock(&(module->Wxbuf.buffer_lock));
-	
-		while(module->Wxbuf.nbElement >= module->Wxbuf.size)
-		{
-			spin_unlock(&(module->Wxbuf.buffer_lock));
-			if(filp->f_flags & O_NONBLOCK)
-			{
-				if(i == 0){ 
-					return -EAGAIN;
-				}
-				else{
-					return i;
-				}					
-			}
-			else
-			{
-				wait_event_interruptible(module->waitTx,module->Wxbuf.nbElement <module->Wxbuf.size);
-				spin_lock(&(module->Wxbuf.buffer_lock));
-			}
+		nb_a_transmettre = min((int)count-nb_data_write,nb_byte_max);
+
+		if(copy_from_user(BufW,&(buf[nb_data_write]),nb_a_transmettre)){
+			printk(KERN_ALERT"Write error copy from user");
+			return -EAGAIN;
 		}
-		write_buffer(BufW[i],&(module->Wxbuf));
-		spin_unlock(&(module->Wxbuf.buffer_lock));
+
+		for(i = 0;i<nb_a_transmettre ; ++i){
+			
+			spin_lock_irq(&(module->Wxbuf.buffer_lock));
+		
+			while(module->Wxbuf.nbElement >= module->Wxbuf.size)
+			{
+				spin_unlock(&(module->Wxbuf.buffer_lock));
+				if(filp->f_flags & O_NONBLOCK)
+				{
+					if(nb_data_write == 0)
+					{ 
+						return -EAGAIN;
+					}
+					else
+					{
+						return nb_data_write+i;
+					}					
+				}
+				else
+				{
+					wait_event_interruptible(module->waitTx,module->Wxbuf.nbElement <module->Wxbuf.size);
+					spin_lock_irq(&(module->Wxbuf.buffer_lock));
+				}
+			}
+			write_buffer(BufW[i],&(module->Wxbuf));
+			spin_unlock(&(module->Wxbuf.buffer_lock));
+		}
+		nb_data_write += i;
 	}
-	printk(KERN_ALERT"Pilote Opened! %i  \n",module->Wxbuf.nbElement);
-	return count;
+	
+	return nb_data_write;
 
 }
 
@@ -248,6 +263,24 @@ static void write_buffer(uint8_t tempo, buffer *buff){
 	buff->nbElement++;	
 		
 }
+
+static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t size){
+
+	if(buffrx->nbElement > size || bufftx->nbElement > size){
+		return -EAGAIN;	
+	}
+	
+	krealloc(bufftx->buffer,size, GFP_KERNEL);
+	krealloc(buffrx->buffer,size, GFP_KERNEL);
+	
+	
+}
+
+static int get_buffer_size(buffer *buff){
+
+	return (int)(buff->size);
+}
+
 
 module_init(pilote_serie_init);
 module_exit(pilote_serie_exit);
