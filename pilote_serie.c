@@ -13,7 +13,7 @@
 #include <linux/slab.h>
 
 
-MODULE_AUTHOR("Mathieu Fournier-Desrochers");
+MODULE_AUTHOR("Mathieu Fournier-Desrochers ell");
 MODULE_LICENSE("Dual BSD/GPL");
 
 
