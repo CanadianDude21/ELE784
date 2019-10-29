@@ -26,10 +26,11 @@ typedef struct {
 	spinlock_t *buffer_lock;
 }buffer;
 
-typedef struct {
-	dev_t dev;
+
+typedef struct mon_Module{
+	dev_t mydev;
 	struct class *cclass;
-	struct cdev mycdev;
+	struct cdev *mycdev;
 	buffer Wxbuf;
 	buffer Rxbuf;
 	int wr_mod;
@@ -38,8 +39,8 @@ typedef struct {
 	
 }monModule;
 
-int pilote_serie_open(struct inode *inode,struct file *filp);
-int pilote_serie_release(struct inode *inode,struct file *filp);
+static int pilote_serie_open(struct inode *inode,struct file *filp);
+static int pilote_serie_release(struct inode *inode,struct file *filp);
 ssize_t pilote_serie_read(struct file *filp, char *buff, size_t count, loff_t *f_pos);
 static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos);
 static void init_buffer(uint8_t size, buffer *buff);
@@ -54,75 +55,90 @@ struct file_operations monModule_fops = {
 	.release = pilote_serie_release,
 };
 
-monModule device;
+monModule deviceTest;
 int serie_major;
 int serie_minor = 0;
 int nbr_dvc = 1;
 
 static int __init pilote_serie_init (void){
 	int result;
-	result = alloc_chrdev_region(&device.dev,serie_minor,nbr_dvc,"PiloteSerie");
+	int error;
+	struct device *deverror;
+
+	deviceTest.mycdev = cdev_alloc();
+	result = alloc_chrdev_region(&deviceTest.mydev,serie_minor,nbr_dvc,"SerialDev0");
 	if(result<0){
 		printk(KERN_WARNING "Pilote: can't get major!");
 	}
-	serie_major = MAJOR(device.dev);
-	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
-	device_create(device.cclass,NULL,device.dev,NULL,"SerialDev0");
-	device.wr_mod = 0;
-	device.rd_mod = 0;
-	init_buffer(16,&(device.Wxbuf));
-	init_buffer(16,&(device.Rxbuf));
-	init_waitqueue_head(&(device.waitRx));
-	init_waitqueue_head(&(device.waitTx));
-	cdev_init(&(device.mycdev), &monModule_fops);
-	cdev_add(&(device.mycdev), device.dev, serie_minor);
-	
+	serie_major = MAJOR(deviceTest.mydev);
+	deviceTest.cclass = class_create(THIS_MODULE, "SerialDev0");
+	deverror = device_create(deviceTest.cclass,NULL,deviceTest.mydev,NULL,"SerialDev0");
+	if(deverror==NULL){
+		printk(KERN_ALERT"ERROR AT DEVICE CREATE");
+	}
+	deviceTest.wr_mod = 0;
+	deviceTest.rd_mod = 0;
+	//init_buffer(16,&(device.Wxbuf));
+	//init_buffer(16,&(device.Rxbuf));
+	init_waitqueue_head(&(deviceTest.waitRx));
+	init_waitqueue_head(&(deviceTest.waitTx));
+	cdev_init(deviceTest.mycdev, &monModule_fops);
+	//cdev_init(&(deviceTest.mycdev), &monModule_fops);
+	deviceTest.mycdev->owner = THIS_MODULE;	
+	//deviceTest.mycdev.owner = THIS_MODULE;
+	deviceTest.mycdev->ops = &monModule_fops;
+	//deviceTest.mycdev.ops = &monModule_fops;
+	error = cdev_add(deviceTest.mycdev, deviceTest.mydev, serie_minor);
+	//error = cdev_add(&(deviceTest.mycdev), deviceTest.mydev, serie_minor);
+	if(error<=0){
+		printk(KERN_ALERT"%i",error);
+	}
 	
 	printk(KERN_WARNING "Hello world!\n");
 	return 0;
 }
 
 static void __exit pilote_serie_exit (void){
-	device_destroy(device.cclass,device.dev);
-	class_destroy(device.cclass);
-	unregister_chrdev_region(device.dev,nbr_dvc);
+	device_destroy(deviceTest.cclass,deviceTest.mydev);
+	class_destroy(deviceTest.cclass);
+	unregister_chrdev_region(deviceTest.mydev,nbr_dvc);
 
 	printk(KERN_ALERT "Goodby cruel world!\n");
 }
 
-int pilote_serie_open(struct inode *inode,struct file *filp){
-	filp->private_data = &device;
-	printk(KERN_ALERT"Pilote Opened!\n");
-	if(device.wr_mod == 1){
+static int pilote_serie_open(struct inode *inode,struct file *filp){
+	/*printk(KERN_ALERT"Pilote Opened!\n");
+	filp->private_data = &deviceTest;
+	if(deviceTest.wr_mod == 1){
 		return -ENOTTY;
 	}
-	if(device.rd_mod == 1){
+	if(deviceTest.rd_mod == 1){
 		return -ENOTTY;
 	}
 	if((filp->f_flags & O_ACCMODE) == O_WRONLY){
-		device.wr_mod=1;
+		deviceTest.wr_mod=1;
 	}
 	if((filp->f_flags & O_ACCMODE) == O_RDONLY){
-		device.rd_mod=1;
+		deviceTest.rd_mod=1;
 	}
 	if((filp->f_flags & O_ACCMODE) ==O_RDWR){
-		device.wr_mod=1;
-		device.rd_mod=1;
-	}
+		deviceTest.wr_mod=1;
+		deviceTest.rd_mod=1;
+	}*/
 	
 	return 0;
 }
 
-int pilote_serie_release(struct inode *inode,struct file *filp){
+static int pilote_serie_release(struct inode *inode,struct file *filp){
 	if((filp->f_flags & O_ACCMODE) == O_WRONLY){
-		device.wr_mod=0;
+		deviceTest.wr_mod=0;
 	}
 	if((filp->f_flags & O_ACCMODE) == O_RDONLY){
-		device.rd_mod=0;
+		deviceTest.rd_mod=0;
 	}
 	if((filp->f_flags & O_ACCMODE) ==O_RDWR){
-		device.wr_mod=0;
-		device.rd_mod=0;
+		deviceTest.wr_mod=0;
+		deviceTest.rd_mod=0;
 	}
 	
 	printk(KERN_ALERT"Pilote Released!\n");
@@ -133,7 +149,7 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 {
 	monModule *module = (monModule*)filp->private_data;
 	int nb_byte_max = 8;
-	uint8_t BufR[(int)count];
+	uint8_t BufR[min(nb_byte_max,(int)count)];
 	int i;
 
 	count = min(nb_byte_max,(int)count);
@@ -183,7 +199,7 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 
     	monModule *module = (monModule*)filp->private_data;
 	int nb_byte_max = 8;
-	uint8_t BufW[count];
+	uint8_t BufW[min(nb_byte_max,(int)count)];
 	int i;
 	
 	count = min(nb_byte_max,(int)count);
