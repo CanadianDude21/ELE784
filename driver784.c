@@ -1,60 +1,8 @@
-#include <linux/module.h>
-#include <linux/init.h>
-
-#include <linux/kernel.h>
-#include <linux/kthread.h>
-#include <linux/kdev_t.h>
-#include <linux/types.h>
-#include <linux/cdev.h>
-#include <linux/fs.h>
-#include <linux/device.h>
-#include <linux/spinlock.h>
-#include <linux/uaccess.h>
-#include <linux/slab.h>
+#include "driver784.h"
 
 
 MODULE_AUTHOR("Mathieu Fournier-Desrochers ell");
 MODULE_LICENSE("Dual BSD/GPL");
-
-
-typedef struct {
-	uint8_t *buffer;
-	uint8_t size;
-	uint8_t idIn;
-	uint8_t idOut;
-	uint8_t nbElement;
-	spinlock_t buffer_lock;
-}buffer;
-
-typedef struct {
-	dev_t dev;
-	struct class *cclass;
-	struct cdev mycdev;
-	buffer Wxbuf;
-	buffer Rxbuf;
-	int wr_mod;
-	int rd_mod;
-	wait_queue_head_t waitRx, waitTx;
-	
-}monModule;
-
-int pilote_serie_open(struct inode *inode,struct file *filp);
-int pilote_serie_release(struct inode *inode,struct file *filp);
-ssize_t pilote_serie_read(struct file *filp, char *buff, size_t count, loff_t *f_pos);
-static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos);
-static void init_buffer(uint8_t size, buffer *buff);
-static void read_buffer(uint8_t* tempo, buffer *buff);
-static void write_buffer(uint8_t tempo, buffer *buff);
-static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t size);
-static int get_buffer_size(buffer *buff);
-
-struct file_operations monModule_fops = {
-	.owner   = THIS_MODULE,
-	.open    = pilote_serie_open,
-	.write   = pilote_serie_write,
-	.read    = pilote_serie_read,
-	.release = pilote_serie_release,
-};
 
 monModule device;
 int serie_major;
@@ -77,7 +25,7 @@ static int __init pilote_serie_init (void){
 	init_waitqueue_head(&(device.waitRx));
 	init_waitqueue_head(&(device.waitTx));
 	cdev_init(&(device.mycdev), &monModule_fops);
-	cdev_add(&(device.mycdev), device.dev, 1);
+	cdev_add(&(device.mycdev), device.dev, nbr_dvc);
 	
 	
 	printk(KERN_WARNING "Hello world!\n");
@@ -237,50 +185,3 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 	return nb_data_write;
 
 }
-
-static void init_buffer(uint8_t size, buffer *buff){
-	
-	buff->size = size;
-	buff->idIn = 0;
-	buff->idOut = 0;
-	buff->nbElement = 0;
-	buff->buffer= kmalloc(sizeof(uint8_t)*size, GFP_KERNEL);
-	spin_lock_init(&(buff->buffer_lock));
-}
-
-static void read_buffer(uint8_t* tempo, buffer *buff){
-	
-	*tempo = buff->buffer[buff->idOut];
-	buff->idOut = (buff->idOut + 1)%buff->size;
-	buff->nbElement--;	
-		
-}
-
-static void write_buffer(uint8_t tempo, buffer *buff){
-	
-	buff->buffer[buff->idIn] = tempo;
-	buff->idIn = (buff->idIn + 1)%buff->size;
-	buff->nbElement++;	
-		
-}
-
-static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t size){
-
-	if(buffrx->nbElement > size || bufftx->nbElement > size){
-		return -EAGAIN;	
-	}
-	
-	krealloc(bufftx->buffer,size, GFP_KERNEL);
-	krealloc(buffrx->buffer,size, GFP_KERNEL);
-	
-	
-}
-
-static int get_buffer_size(buffer *buff){
-
-	return (int)(buff->size);
-}
-
-
-module_init(pilote_serie_init);
-module_exit(pilote_serie_exit);
