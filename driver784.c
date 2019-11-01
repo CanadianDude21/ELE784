@@ -185,3 +185,38 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 	return nb_data_write;
 
 }
+
+int pilote_serie_ioctl(struct *inode, struct file *filp, unsigned int cmd, unsigned long arg){
+	
+	int retval = 0;
+	if(_IOC_TYPE(cmd) != MAGIC_NUMBER_PILOTE){
+		printk(KERN_WARNING"Error magic number");
+		return -EAGAIN;
+	}
+	if(_IOC_NR(cmd) > MAX_NBR_IOCCMD ){
+		printk(KERN_WARNING"command does not exist: %d",_IOC_NR(cmd));
+		return -EAGAIN;
+	}
+	
+	switch(cmd){
+		
+	case SET_BAUD_RATE:
+					break;
+	case SET_DATA_SIZE:
+					break;
+	case SET_PARITY:
+					break;
+	case GET_BUF_SIZE:
+					retval = get_buffer_size(&(device->Wxbuf));
+					printk(KERN_WARNING"GET_BUF_SIZE: %d",retval);
+					break;
+	case SET_BUF_SIZE:
+					break;
+	default:
+		return -EAGAIN;
+	}
+
+
+
+
+}

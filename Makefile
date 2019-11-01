@@ -1,8 +1,8 @@
 ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 
-obj-m := module_serie.o
-module_serie-y := driver784.o bufcirc.o
+obj-m := pilote_serie.o
+pilote_serie-y := driver784.o bufcirc.o
 
 else
 
