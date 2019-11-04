@@ -26,15 +26,18 @@ static void write_buffer(uint8_t tempo, buffer *buff){
 		
 }
 
-static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t size){
+static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 
-	if(buffrx->nbElement > size || bufftx->nbElement > size){
+	if(buffrx->nbElement > newSize || bufftx->nbElement > newSize){
 		return -EAGAIN;	
 	}
 	
-	krealloc(bufftx->buffer,size, GFP_KERNEL);
-	krealloc(buffrx->buffer,size, GFP_KERNEL);
+	bufftx->buffer = krealloc(bufftx->buffer,newSize, GFP_KERNEL);
+	bufftx->size = newSize;
+	buffrx->buffer = krealloc(buffrx->buffer,newSize, GFP_KERNEL);
+	buffrx->size = newSize;
 	
+	return 0;
 	
 }
 

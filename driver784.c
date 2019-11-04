@@ -186,7 +186,7 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 
 }
 
-int pilote_serie_ioctl(struct *inode, struct file *filp, unsigned int cmd, unsigned long arg){
+ssize_t pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	
 	int retval = 0;
 	if(_IOC_TYPE(cmd) != MAGIC_NUMBER_PILOTE){
@@ -201,17 +201,20 @@ int pilote_serie_ioctl(struct *inode, struct file *filp, unsigned int cmd, unsig
 	switch(cmd){
 		
 	case SET_BAUD_RATE:
-					break;
+		
+		break;
 	case SET_DATA_SIZE:
-					break;
+		break;
 	case SET_PARITY:
-					break;
+		break;
 	case GET_BUF_SIZE:
-					retval = get_buffer_size(&(device->Wxbuf));
-					printk(KERN_WARNING"GET_BUF_SIZE: %d",retval);
-					break;
+		retval = get_buffer_size(&(device.Wxbuf));
+		printk(KERN_WARNING "GET_BUF_SIZE: %d",retval);
+		break;
 	case SET_BUF_SIZE:
-					break;
+		retval = resize_buffer(&(device.Rxbuf),&(device.Wxbuf),arg);
+		printk(KERN_WARNING "SET_BUF_SIZE: %d",retval);
+		break;
 	default:
 		return -EAGAIN;
 	}

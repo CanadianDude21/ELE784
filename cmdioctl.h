@@ -1,4 +1,4 @@
-#include <linux/ioctl.h>
+#include <asm/ioctl.h>
 
 #define MAGIC_NUMBER_PILOTE 'Z'
 
