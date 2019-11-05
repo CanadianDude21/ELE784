@@ -24,6 +24,8 @@ typedef struct {
 	int wr_mod;
 	int rd_mod;
 	wait_queue_head_t waitRx, waitTx;
+	int SerialBaseAdd;
+	int SerialIRQnbr;
 	
 }monModule;
 
