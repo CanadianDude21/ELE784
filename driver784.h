@@ -1,6 +1,3 @@
-#ifndef DRV784_H
-#define DRV784_H
-
 #include <generated/autoconf.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -51,4 +48,3 @@ static void pilote_serie_exit(void);
 module_init(pilote_serie_init);
 module_exit(pilote_serie_exit);
 
-#endif /* DRV784_H */

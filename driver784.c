@@ -218,8 +218,5 @@ ssize_t pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	default:
 		return -EAGAIN;
 	}
-
-
-
-
+	return 0;
 }

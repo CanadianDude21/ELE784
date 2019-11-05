@@ -1,6 +1,6 @@
 #include "bufcirc.h"
 
-static void init_buffer(uint8_t size, buffer *buff){
+void init_buffer(uint8_t size, buffer *buff){
 	
 	buff->size = size;
 	buff->idIn = 0;
@@ -10,7 +10,7 @@ static void init_buffer(uint8_t size, buffer *buff){
 	spin_lock_init(&(buff->buffer_lock));
 }
 
-static void read_buffer(uint8_t* tempo, buffer *buff){
+void read_buffer(uint8_t* tempo, buffer *buff){
 	
 	*tempo = buff->buffer[buff->idOut];
 	buff->idOut = (buff->idOut + 1)%buff->size;
@@ -18,7 +18,7 @@ static void read_buffer(uint8_t* tempo, buffer *buff){
 		
 }
 
-static void write_buffer(uint8_t tempo, buffer *buff){
+void write_buffer(uint8_t tempo, buffer *buff){
 	
 	buff->buffer[buff->idIn] = tempo;
 	buff->idIn = (buff->idIn + 1)%buff->size;
@@ -26,7 +26,7 @@ static void write_buffer(uint8_t tempo, buffer *buff){
 		
 }
 
-static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
+int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 
 	if(buffrx->nbElement > newSize || bufftx->nbElement > newSize){
 		return -EAGAIN;	
@@ -41,7 +41,7 @@ static int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 	
 }
 
-static int get_buffer_size(buffer *buff){
+int get_buffer_size(buffer *buff){
 
 	return (int)(buff->size);
 }
