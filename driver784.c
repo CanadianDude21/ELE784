@@ -5,6 +5,8 @@ MODULE_AUTHOR("Mathieu Fournier-Desrochers ell");
 MODULE_LICENSE("Dual BSD/GPL");
 
 monModule device;
+device->SerialBaseAdd = SerialPort_Address_0;
+device->SerialIRQnbr = SerialPort_IRQ_Address_0;
 int serie_major;
 int serie_minor = 0;
 int nbr_dvc = 1;
@@ -14,6 +16,15 @@ static int __init pilote_serie_init (void){
 	result = alloc_chrdev_region(&device.dev,serie_minor,nbr_dvc,"PiloteSerie");
 	if(result<0){
 		printk(KERN_WARNING "Pilote: can't get major!");
+		return -ENOTTY;
+	}
+	if(request_region(device->SerialBaseAdd, nbr_registres, "pilote_serie")){
+		printk(KERN_WARNING "Pilote: error with request region!");
+		return -ENOTTY;
+	}
+	if(request_irq(device->SerialIRQnbr, &my_interrupt, IRQF_SHARED, "pilote_serie",&(device))){
+		printk(KERN_WARNING "Pilote: error with request IRQ!");
+		return -ENOTTY;
 	}
 	serie_major = MAJOR(device.dev);
 	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
