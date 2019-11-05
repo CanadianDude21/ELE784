@@ -22,6 +22,10 @@ static int __init pilote_serie_init (void){
 		printk(KERN_WARNING "Pilote: error with request region!");
 		return -ENOTTY;
 	}
+	if(request_irq(device->SerialIRQnbr, &my_interrupt, IRQF_SHARED, "pilote_serie",&(device))){
+		printk(KERN_WARNING "Pilote: error with request IRQ!");
+		return -ENOTTY;
+	}
 	serie_major = MAJOR(device.dev);
 	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
 	device_create(device.cclass,NULL,device.dev,NULL,"SerialDev0");

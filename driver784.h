@@ -14,6 +14,7 @@
 #include <linux/slab.h>
 #include "bufcirc.h"
 #include "cmdioctl.h"
+#include "port_config.h"
 
 typedef struct {
 	dev_t dev;
