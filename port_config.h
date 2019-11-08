@@ -9,7 +9,7 @@
 #define nbr_registres 8
 
 #define f_clk 1843200
-#define BAUD_115200 0x0001
+
 
 #define DL  0x00
 
@@ -39,5 +39,10 @@
 #define LSR_THRE         0x20
 #define LSR_TEMT         0x40
 
-void init_port(struct monModule* module);
 
+
+void init_port(struct monModule* module);
+irqreturn_t my_interrupt(int irq_no, void *arg);
+void SetParity(int parity, struct monModule* module);
+void SetDataSize(int size, struct monModule* module);
+void SetBaudRate(int baud_rate, struct monModule* module);
