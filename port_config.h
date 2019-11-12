@@ -1,4 +1,19 @@
+#include <linux/module.h>
+#include <linux/init.h>
+
+#include <linux/kernel.h>
+#include <linux/kthread.h>
+#include <linux/kdev_t.h>
+#include <linux/types.h>
+#include <linux/cdev.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/spinlock.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
 #include <asm/io.h>
+#include <linux/interrupt.h>
+#include "bufcirc.h"
 
 #define SerialPort_Address_0 0xc030
 #define SerialPort_Address_1 0xc020
@@ -39,10 +54,23 @@
 #define LSR_THRE         0x20
 #define LSR_TEMT         0x40
 
+typedef struct {
+	dev_t dev;
+	struct class *cclass;
+	struct cdev mycdev;
+	buffer Wxbuf;
+	buffer Rxbuf;
+	int wr_mod;
+	int rd_mod;
+	wait_queue_head_t waitRx, waitTx;
+	int SerialBaseAdd;
+	int SerialIRQnbr;
+	
+}monModule;
 
 
-void init_port(struct monModule* module);
+void init_port(monModule* module);
 irqreturn_t my_interrupt(int irq_no, void *arg);
-void SetParity(int parity, struct monModule* module);
-void SetDataSize(int size, struct monModule* module);
-void SetBaudRate(int baud_rate, struct monModule* module);
+void SetParity(int parity, monModule* module);
+void SetDataSize(int size, monModule* module);
+void SetBaudRate(int baud_rate, monModule* module);

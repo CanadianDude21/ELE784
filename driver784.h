@@ -12,23 +12,8 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
-#include "bufcirc.h"
 #include "cmdioctl.h"
 #include "port_config.h"
-
-typedef struct {
-	dev_t dev;
-	struct class *cclass;
-	struct cdev mycdev;
-	buffer Wxbuf;
-	buffer Rxbuf;
-	int wr_mod;
-	int rd_mod;
-	wait_queue_head_t waitRx, waitTx;
-	int SerialBaseAdd;
-	int SerialIRQnbr;
-	
-}monModule;
 
 int pilote_serie_open(struct inode *inode,struct file *filp);
 int pilote_serie_release(struct inode *inode,struct file *filp);

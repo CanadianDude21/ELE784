@@ -1,7 +1,7 @@
 #include "port_config.h"
 
 
-void init_port(struct monModule* module){
+void init_port(monModule* module){
 	
 	uint32_t serial_add_copy;
 	uint8_t lcr_cpy;
@@ -19,7 +19,7 @@ void init_port(struct monModule* module){
 	lcr_cpy = lcr_cpy  & ~(LCR_STB);
 	iowrite8(lcr_cpy, serial_add_copy + LCR);
 	
-	fcr_cpy = fcr_cpy | fcr_FIFOEN;
+	fcr_cpy = fcr_cpy | FCR_FIFOEN;
 	iowrite8(lcr_cpy, serial_add_copy + FCR);
 	fcr_cpy = fcr_cpy & ~(FCR_RCVRTRM) & ~(FCR_RCVRTRL) | FCR_RCVRRE;
 	iowrite8(lcr_cpy, serial_add_copy + FCR);
@@ -36,12 +36,12 @@ irqreturn_t my_interrupt(int irq_no, void *arg){
 	
 	uint8_t RBR_cpy;
 	uint8_t THR_cpy;	
-	struct monModule *module = (struct monModule*)arg; 
+	monModule *module = (monModule*)arg; 
 	uint8_t LSR_cpy = ioread8(module->SerialBaseAdd + LSR);
 	uint8_t LCR_cpy = ioread8(module->SerialBaseAdd + LCR);
 		
 		
-	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE){
+	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE)){
 		
 		printk(KERN_WARNING "Pilote: error with LSR!");
 
@@ -63,10 +63,10 @@ irqreturn_t my_interrupt(int irq_no, void *arg){
 		if(LCR_cpy & LCR_DLAB){	
 			iowrite8((LCR_cpy & ~(LCR_DLAB)),module->SerialBaseAdd + LCR);
 		}
-	    spin_lock(&(module->Txbuf.buffer_lock));
-		read_buffer(&THR_cpy,&(module->Txbuf));
-		spin_unlock(&(module->Txbuf.buffer_lock));
-		iowrite8(module->SerialBaseAdd);
+	    spin_lock(&(module->Wxbuf.buffer_lock));
+		read_buffer(&THR_cpy,&(module->Wxbuf));
+		spin_unlock(&(module->Wxbuf.buffer_lock));
+		iowrite8(THR_cpy,module->SerialBaseAdd); //PEUT ETRE PAS LA BONNE CHOSE QU'ON ECRIT
 		wake_up_interruptible(&(module->waitTx));
 	}
 	return IRQ_HANDLED;
@@ -74,22 +74,22 @@ irqreturn_t my_interrupt(int irq_no, void *arg){
 }
 
 
-void SetBaudRate(int baud_rate, struct monModule* module){
+void SetBaudRate(int baud_rate, monModule* module){
 	
-	uint16_t = dl_cpy
-	uint8_t lcr_cpy = ioread8(serial_add_copy + LCR);
+	uint16_t dl_cpy;
+	uint8_t lcr_cpy = ioread8(module->SerialBaseAdd + LCR);
 	lcr_cpy = lcr_cpy | LCR_DLAB;
 	iowrite8(lcr_cpy, module->SerialBaseAdd + LCR);
 	
 	dl_cpy = f_clk/(16*baud_rate);
-	iowrite16(dl, module->SerialBaseAdd + DL);
+	iowrite16(dl_cpy, module->SerialBaseAdd + DL);
 	
 	lcr_cpy = lcr_cpy & ~(LCR_DLAB);
 	iowrite8(lcr_cpy, module->SerialBaseAdd + LCR);
 		
 }
 
-void SetDataSize(int size, struct monModule* module){
+void SetDataSize(int size, monModule* module){
 	
 	uint8_t LCR_cpy;
 	
@@ -113,11 +113,11 @@ void SetDataSize(int size, struct monModule* module){
 		
 }
 
-void SetParity(int parity, struct monModule* module){
+void SetParity(int parity, monModule* module){
 	
 	uint8_t LCR_cpy;
 	
-	switch(size){
+	switch(parity){
 		
 		case 0:
 			LCR_cpy = LCR_cpy & ~(LCR_PEN);
