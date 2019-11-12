@@ -1,4 +1,5 @@
 #include <asm/io.h>
+#include <linux/interrupt.h>
 
 #define SerialPort_Address_0 0xc030
 #define SerialPort_Address_1 0xc020
@@ -42,7 +43,7 @@
 
 
 void init_port(struct monModule* module);
-irqreturn_t my_interrupt(int irq_no, void *arg);
+extern irqreturn_t my_interrupt(int irq_no, void *arg);
 void SetParity(int parity, struct monModule* module);
 void SetDataSize(int size, struct monModule* module);
 void SetBaudRate(int baud_rate, struct monModule* module);

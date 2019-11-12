@@ -32,7 +32,7 @@ void init_port(struct monModule* module){
 
 
 
-irqreturn_t my_interrupt(int irq_no, void *arg){
+extern irqreturn_t my_interrupt(int irq_no, void *arg){
 	
 	uint8_t RBR_cpy;
 	uint8_t THR_cpy;	
