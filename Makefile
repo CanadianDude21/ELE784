@@ -2,7 +2,7 @@ ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 
 obj-m := pilote_serie.o
-pilote_serie-y := driver784.o bufcirc.o port_config.o
+pilote_serie-y := driver784.o bufcirc.o
 
 else
 
