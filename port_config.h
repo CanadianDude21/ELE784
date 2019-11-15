@@ -63,8 +63,8 @@ typedef struct {
 	int wr_mod;
 	int rd_mod;
 	wait_queue_head_t waitRx, waitTx;
-	int SerialBaseAdd;
-	int SerialIRQnbr;
+	uint64_t SerialBaseAdd;
+	uint64_t SerialIRQnbr;
 	
 }monModule;
 
@@ -74,3 +74,4 @@ irqreturn_t my_interrupt(int irq_no, void *arg);
 void SetParity(int parity, monModule* module);
 void SetDataSize(int size, monModule* module);
 void SetBaudRate(int baud_rate, monModule* module);
+void change_ETBEI(int enable, monModule* module);

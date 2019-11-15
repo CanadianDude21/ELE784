@@ -30,6 +30,8 @@ static int __init pilote_serie_init (void){
 		printk(KERN_WARNING "Pilote: error with request IRQ!");
 		return -ENOTTY;
 	}
+
+	serie_major = MAJOR(device.dev);
 	device.wr_mod = 0;
 	device.rd_mod = 0;
 	init_buffer(200,&(device.Wxbuf));
@@ -43,12 +45,12 @@ static int __init pilote_serie_init (void){
 	cdev_init(&(device.mycdev), &monModule_fops);
 	cdev_add(&(device.mycdev), device.dev, nbr_dvc);
 	
-	
 	printk(KERN_WARNING "Hello world!\n");
 	return 0;
 }
 
 static void __exit pilote_serie_exit (void){
+	//ioport_unmap((void *)(device.SerialBaseAdd));
 	device_destroy(device.cclass,device.dev);
 	class_destroy(device.cclass);
 	unregister_chrdev_region(device.dev,nbr_dvc);
@@ -195,6 +197,8 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 			}
 			write_buffer(BufW[i],&(module->Wxbuf));
 			spin_unlock(&(module->Wxbuf.buffer_lock));
+			change_ETBEI(1, module);
+
 		}
 		nb_data_write += i;
 	}
