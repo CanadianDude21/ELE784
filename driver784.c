@@ -30,15 +30,16 @@ static int __init pilote_serie_init (void){
 		printk(KERN_WARNING "Pilote: error with request IRQ!");
 		return -ENOTTY;
 	}
-	serie_major = MAJOR(device.dev);
-	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
-	device_create(device.cclass,NULL,device.dev,NULL,"SerialDev0");
 	device.wr_mod = 0;
 	device.rd_mod = 0;
 	init_buffer(200,&(device.Wxbuf));
 	init_buffer(200,&(device.Rxbuf));
 	init_waitqueue_head(&(device.waitRx));
 	init_waitqueue_head(&(device.waitTx));
+	init_port(&(device));
+	serie_major = MAJOR(device.dev);
+	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
+	device_create(device.cclass,NULL,device.dev,NULL,"SerialDev0");
 	cdev_init(&(device.mycdev), &monModule_fops);
 	cdev_add(&(device.mycdev), device.dev, nbr_dvc);
 	
@@ -106,11 +107,11 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 		
 		for(i = 0; i< min((int)count-nb_data_read,nb_byte_max);++i){
 		
-			spin_lock_irq(&(module->Wxbuf.buffer_lock));
+			spin_lock_irq(&(module->Rxbuf.buffer_lock));
 		
-			while(module->Wxbuf.nbElement <= 0)
+			while(module->Rxbuf.nbElement <= 0)
 			{
-				spin_unlock(&(module->Wxbuf.buffer_lock)); 
+				spin_unlock(&(module->Rxbuf.buffer_lock));
 				if(filp->f_flags & O_NONBLOCK)
 				{
 					if(nb_data_read == 0){
@@ -129,13 +130,13 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 				}
 				else
 				{
-					wait_event_interruptible(module->waitRx,module->Wxbuf.nbElement > 0);
-					spin_lock_irq(&(module->Wxbuf.buffer_lock));
+					wait_event_interruptible(module->waitRx,module->Rxbuf.nbElement > 0);
+					spin_lock_irq(&(module->Rxbuf.buffer_lock));
 				}
 			}
 		
-			read_buffer(&BufR[i],&(module->Wxbuf));
-			spin_unlock(&(module->Wxbuf.buffer_lock));
+			read_buffer(&BufR[i],&(module->Rxbuf));
+			spin_unlock(&(module->Rxbuf.buffer_lock));
 		}
 		if(copy_to_user(&buf[nb_data_read],BufR,i)){
 			printk(KERN_ALERT" Read error copy to user");
@@ -189,6 +190,7 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 				{
 					wait_event_interruptible(module->waitTx,module->Wxbuf.nbElement <module->Wxbuf.size);
 					spin_lock_irq(&(module->Wxbuf.buffer_lock));
+					change_ETBEI(1,module);
 				}
 			}
 			write_buffer(BufW[i],&(module->Wxbuf));
@@ -216,11 +218,13 @@ ssize_t pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	switch(cmd){
 		
 	case SET_BAUD_RATE:
-		
+		SetBaudRate((int)arg, &device);
 		break;
 	case SET_DATA_SIZE:
+		SetDataSize((int)arg, &device);
 		break;
 	case SET_PARITY:
+		SetParity((int)arg, &device);
 		break;
 	case GET_BUF_SIZE:
 		retval = get_buffer_size(&(device.Wxbuf));
@@ -233,5 +237,5 @@ ssize_t pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	default:
 		return -EAGAIN;
 	}
-	return 0;
+	return retval;
 }

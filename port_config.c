@@ -19,6 +19,7 @@ void init_port(monModule* module){
 	lcr_cpy = lcr_cpy  & ~(LCR_STB);
 	iowrite8(lcr_cpy, serial_add_copy + LCR);
 	
+	fcr_cpy = ioread8(serial_add_copy + FCR);
 	fcr_cpy = fcr_cpy | FCR_FIFOEN;
 	iowrite8(lcr_cpy, serial_add_copy + FCR);
 	fcr_cpy = fcr_cpy & ~(FCR_RCVRTRM) & ~(FCR_RCVRTRL) | FCR_RCVRRE;
