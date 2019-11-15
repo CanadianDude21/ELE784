@@ -50,11 +50,15 @@ static int __init pilote_serie_init (void){
 }
 
 static void __exit pilote_serie_exit (void){
-	//ioport_unmap((void *)(device.SerialBaseAdd));
+
+	cdev_del(&(device.mycdev));
 	device_destroy(device.cclass,device.dev);
 	class_destroy(device.cclass);
+	free_irq(device.SerialIRQnbr, &(device));
+	release_region(device.SerialBaseAdd, nbr_registres);
 	unregister_chrdev_region(device.dev,nbr_dvc);
-
+	kfree(device.Wxbuf.buffer);
+	kfree(device.Rxbuf.buffer);
 	printk(KERN_ALERT "Goodby cruel world!\n");
 }
 
