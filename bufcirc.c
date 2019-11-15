@@ -28,13 +28,39 @@ void write_buffer(uint8_t tempo, buffer *buff){
 
 int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 
+	uint8_t *tempBuffrx;
+	uint8_t *tempBufftx;
+	int i = 0;
+	int j = bufftx->idOut;
+
+	tempBufftx = kmalloc(sizeof(uint8_t)*newSize, GFP_KERNEL);
+	tempBuffrx = kmalloc(sizeof(uint8_t)*newSize, GFP_KERNEL);
+
 	if(buffrx->nbElement > newSize || bufftx->nbElement > newSize){
 		return -EAGAIN;	
 	}
-	
-	bufftx->buffer = krealloc(bufftx->buffer,newSize, GFP_KERNEL);
+	while(j != bufftx->idIn){
+		tempBufftx[i] = bufftx->buffer[j];
+		j = (j+1)%bufftx->size;
+		i++;
+	}
+	kfree(bufftx->buffer);
+	bufftx->buffer = tempBufftx;
+	bufftx->idOut = 0;
+	bufftx->idIn = i;
 	bufftx->size = newSize;
-	buffrx->buffer = krealloc(buffrx->buffer,newSize, GFP_KERNEL);
+
+	i = 0;
+	j = buffrx->idOut;
+	while(j != buffrx->idIn){
+		tempBuffrx[i] = buffrx->buffer[j];
+		j = (j+1)%buffrx->size;
+		i++;
+	}
+	kfree(buffrx->buffer);
+	buffrx->buffer = tempBuffrx;
+	buffrx->idOut = 0;
+	buffrx->idIn = i;
 	buffrx->size = newSize;
 	
 	return 0;
