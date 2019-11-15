@@ -18,6 +18,7 @@ static int __init pilote_serie_init (void){
 	device.SerialIRQnbr = SerialPort_IRQ_Address_0;
 	
 	result = alloc_chrdev_region(&device.dev,serie_minor,nbr_dvc,"PiloteSerie");
+	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
 	if(result<0){
 		printk(KERN_WARNING "Pilote: can't get major!");
 		return -ENOTTY;
@@ -39,8 +40,6 @@ static int __init pilote_serie_init (void){
 	init_waitqueue_head(&(device.waitRx));
 	init_waitqueue_head(&(device.waitTx));
 	init_port(&(device));
-	serie_major = MAJOR(device.dev);
-	device.cclass = class_create(THIS_MODULE, "PiloteSerie");
 	device_create(device.cclass,NULL,device.dev,NULL,"SerialDev0");
 	cdev_init(&(device.mycdev), &monModule_fops);
 	cdev_add(&(device.mycdev), device.dev, nbr_dvc);
@@ -110,7 +109,7 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 	int i;
 	
 	while(nb_data_read < count){
-		
+		serie_major = MAJOR(device.dev);
 		for(i = 0; i< min((int)count-nb_data_read,nb_byte_max);++i){
 		
 			spin_lock_irq(&(module->Rxbuf.buffer_lock));
