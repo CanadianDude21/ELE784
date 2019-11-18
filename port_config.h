@@ -54,7 +54,7 @@
 #define LSR_THRE         0x20
 #define LSR_TEMT         0x40
 
-typedef struct {
+typedef struct{
 	dev_t dev;
 	struct class *cclass;
 	struct cdev mycdev;
@@ -63,8 +63,9 @@ typedef struct {
 	int wr_mod;
 	int rd_mod;
 	wait_queue_head_t waitRx, waitTx;
-	uint64_t SerialBaseAdd;
-	uint64_t SerialIRQnbr;
+	uint32_t SerialBaseAdd;
+	uint32_t SerialIRQnbr;
+	spinlock_t acces_mod;
 	
 }monModule;
 
