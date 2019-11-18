@@ -82,13 +82,21 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 
 void SetBaudRate(int baud_rate, monModule* module){
 	
-	uint16_t dl_cpy;
+	uint8_t dl_cpy;
 	uint8_t lcr_cpy = inb((module->SerialBaseAdd + LCR));
+	printk(KERN_WARNING "Registre LCR avant: %d",lcr_cpy);
 	lcr_cpy = lcr_cpy | LCR_DLAB;
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
+	lcr_cpy = inb((module->SerialBaseAdd + LCR));
+	printk(KERN_WARNING "Registre LCR après: %d",lcr_cpy);
 	
 	dl_cpy = f_clk/(16*baud_rate);
-	outw(dl_cpy, (module->SerialBaseAdd + DL));
+	printk(KERN_WARNING "valeur a ecrire dans DL: %d",dl_cpy);
+	lcr_cpy = inb((module->SerialBaseAdd + LCR));
+	printk(KERN_WARNING "Registre LCR juste avant d'ecrire dans DL: %d",lcr_cpy);
+	outb(dl_cpy, (module->SerialBaseAdd));
+	dl_cpy = inb((module->SerialBaseAdd));
+	printk(KERN_WARNING "valeur lue dans DL: %d",dl_cpy);
 	
 	lcr_cpy = lcr_cpy & ~(LCR_DLAB);
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
