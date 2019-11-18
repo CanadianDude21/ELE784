@@ -14,12 +14,16 @@
 #include <linux/slab.h>
 #include "cmdioctl.h"
 #include "port_config.h"
+#include <linux/errno.h> 
+#include <linux/syscalls.h>
+#include <linux/stat.h> 
+
 
 int pilote_serie_open(struct inode *inode,struct file *filp);
-int pilote_serie_release(struct inode *inode,struct file *filp);
+static int pilote_serie_release(struct inode *inode,struct file *filp);
 ssize_t pilote_serie_read(struct file *filp, char *buff, size_t count, loff_t *f_pos);
 static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos);
-ssize_t pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+long pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 struct file_operations monModule_fops = {
 	.owner   = THIS_MODULE,
@@ -27,7 +31,7 @@ struct file_operations monModule_fops = {
 	.write   = pilote_serie_write,
 	.read    = pilote_serie_read,
 	.release = pilote_serie_release,
-	.unlocked_ioctl   = pilote_serie_ioctl,
+	.unlocked_ioctl   = pilote_serie_ioctl
 };
 
 static int pilote_serie_init(void);
