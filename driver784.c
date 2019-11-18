@@ -32,19 +32,19 @@ static int __init pilote_serie_init (void){
 		init_waitqueue_head(&(device[i].waitRx));
 		init_waitqueue_head(&(device[i].waitTx));
 		
-		/*
-		if(request_region(device[i].SerialBaseAdd,nbr_registres, "pilote_%d",i) == NULL){
+		
+		if(request_region(device[i].SerialBaseAdd,nbr_registres, "pilote") == NULL){
 			printk(KERN_WARNING "Pilote: error with request region!");
 			return -ENOTTY;
 		}
 		
-		if(request_irq(device.SerialIRQnbr, &my_interrupt, IRQF_SHARED, "pilote_serie_%d",i,&(device[i])) < 0){
+		if(request_irq(device[i].SerialIRQnbr, &my_interrupt, IRQF_SHARED, "pilote_serie",&(device[i])) < 0){
 			printk(KERN_WARNING "Pilote: error with request IRQ!");
 			release_region(device[i].SerialBaseAdd,nbr_registres);
 			return -ENOTTY;
 		}
 		init_port(&(device[i]));
-		*/
+		
 
 	}
 
@@ -76,8 +76,8 @@ static void __exit pilote_serie_exit (void){
 	class_destroy(device[0].cclass);
 	unregister_chrdev_region(device[0].dev,nbr_dvc);
 	for(i = 0; i<nbr_dvc ; ++i){
-		//free_irq(device[i].SerialIRQnbr, &(device[i]));
-		//release_region(device[i].SerialBaseAdd,nbr_registres);
+		free_irq(device[i].SerialIRQnbr, &(device[i]));
+		release_region(device[i].SerialBaseAdd,nbr_registres);
 		
 		kfree(device[i].Wxbuf.buffer);
 		kfree(device[i].Rxbuf.buffer);

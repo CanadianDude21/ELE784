@@ -92,9 +92,8 @@ void SetBaudRate(int baud_rate, monModule* module){
 	lcr_cpy = lcr_cpy | LCR_DLAB;
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
 	
-	dl_cpy = 12;
+	dl_cpy = f_clk/ (baud_rate*16);
 	dl_LSB = (uint8_t)(dl_cpy & 0x0f);
-
 	printk(KERN_WARNING"lsb : %d",dl_LSB);
 	dl_MSB = (uint8_t)(dl_cpy & 0xf0);
 	printk(KERN_WARNING"msb : %d",dl_MSB);
