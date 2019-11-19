@@ -17,21 +17,6 @@ static int __init pilote_serie_init (void){
 	
 	int i;
 	int result;
-
-	serie_major = MAJOR(device.dev);
-	device.wr_mod = 0;
-	device.rd_mod = 0;
-	init_buffer(200,&(device.Wxbuf));
-	init_buffer(200,&(device.Rxbuf));
-	init_waitqueue_head(&(device.waitRx));
-	init_waitqueue_head(&(device.waitTx));
-	device.SerialBaseAdd = SerialPort_Address_0;
-	device.SerialIRQnbr = SerialPort_IRQ_Address_0;
-
-	if(request_region(device.SerialBaseAdd,nbr_registres, "pilote") == NULL){
-		printk(KERN_WARNING "Pilote: error with request region!");
-		return -ENODEV;
-	}
 	
 	device[0].SerialBaseAdd = SerialPort_Address_0;
 	device[1].SerialBaseAdd = SerialPort_Address_1;
@@ -153,7 +138,7 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 	uint8_t BufR[nb_byte_max];
 	int nb_data_read = 0;
 	int nb_a_transmettre;
-    	int nb_disponible;
+    int nb_disponible;
 	int i;
 
 	spin_lock_irq(&(module->Rxbuf.buffer_lock));
@@ -207,12 +192,12 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 
 static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
 
-    	monModule *module = (monModule*)filp->private_data;
+    monModule *module = (monModule*)filp->private_data;
 	int nb_byte_max = 8;
 	int nb_data_write = 0;
 	uint8_t BufW[nb_byte_max];
 	int nb_a_transmettre;
-    	int nb_disponible;
+    int nb_disponible;
 	int i;
 
 	spin_lock_irq(&(module->Wxbuf.buffer_lock));

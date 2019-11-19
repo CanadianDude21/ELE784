@@ -40,7 +40,7 @@ void init_port(monModule* module){
 extern irqreturn_t my_interrupt(int irq_no, void *arg){
 	
 	uint8_t RBR_cpy;
-	uint8_t THR_cpy;	
+	uint8_t THR_cpy;
 	monModule *module = (monModule*)arg; 
 	uint8_t LSR_cpy = inb((module->SerialBaseAdd + LSR));
 	uint8_t LCR_cpy = inb((module->SerialBaseAdd + LCR));
