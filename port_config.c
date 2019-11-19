@@ -9,7 +9,8 @@ void init_port(monModule* module){
 	uint8_t fcr_cpy;
 	uint8_t ier_cpy;
 
-	SetBaudRate(115200, module);
+
+	SetBaudRate(9600, module);
 	SetDataSize(8, module);
 	SetParity(1, module);
 	
@@ -29,6 +30,7 @@ void init_port(monModule* module){
 	ier_cpy = (ier_cpy & ~(IER_ETBEI)) | IER_ERBFI;
 	outb(ier_cpy, (serial_add_copy + IER));
 	transmission_enable = 0;
+
 
 
 
@@ -72,6 +74,7 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 			change_ETBEI(0, module);
 		}
 		spin_unlock(&(module->Wxbuf.buffer_lock));
+		printk(KERN_WARNING"envoie : %d",THR_cpy);
 		outb(THR_cpy,(module->SerialBaseAdd));
 		wake_up_interruptible(&(module->waitTx));
 	}
@@ -82,24 +85,32 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 
 void SetBaudRate(int baud_rate, monModule* module){
 	
-	uint8_t dl_cpy;
+	uint8_t dl_LSB;
+	uint8_t dl_MSB;
+	uint16_t dl_cpy;
 	uint8_t lcr_cpy = inb((module->SerialBaseAdd + LCR));
 	printk(KERN_WARNING "Registre LCR avant: %d",lcr_cpy);
 	lcr_cpy = lcr_cpy | LCR_DLAB;
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
 	lcr_cpy = inb((module->SerialBaseAdd + LCR));
 	printk(KERN_WARNING "Registre LCR après: %d",lcr_cpy);
-	
-	dl_cpy = f_clk/(16*baud_rate);
-	printk(KERN_WARNING "valeur a ecrire dans DL: %d",dl_cpy);
-	lcr_cpy = inb((module->SerialBaseAdd + LCR));
-	printk(KERN_WARNING "Registre LCR juste avant d'ecrire dans DL: %d",lcr_cpy);
-	outb(dl_cpy, (module->SerialBaseAdd));
-	dl_cpy = inb((module->SerialBaseAdd));
-	printk(KERN_WARNING "valeur lue dans DL: %d",dl_cpy);
-	
+
+	dl_cpy = f_clk/ (baud_rate*16);
+	dl_LSB = (uint8_t)(dl_cpy & 0x0f);
+	printk(KERN_WARNING"lsb : %d",dl_LSB);
+	dl_MSB = (uint8_t)(dl_cpy & 0xf0);
+	printk(KERN_WARNING"msb : %d",dl_MSB);
+	outb(dl_LSB, (module->SerialBaseAdd + DL));
+	outb(dl_MSB, (module->SerialBaseAdd + DL + 0x01));
+
+	dl_LSB = inb((module->SerialBaseAdd + DL));
+	printk(KERN_WARNING"lsb : %d",dl_LSB);
+	dl_MSB = inb((module->SerialBaseAdd + DL + 0x01));
+	printk(KERN_WARNING"msb : %d",dl_MSB);
+
 	lcr_cpy = lcr_cpy & ~(LCR_DLAB);
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
+	
 		
 }
 
@@ -137,10 +148,10 @@ void SetParity(int parity, monModule* module){
 			LCR_cpy = LCR_cpy & ~(LCR_PEN);
 			break;
 		case 1:
-			LCR_cpy = (LCR_cpy | LCR_PEN) & ~(LCR_STB);
+			LCR_cpy = (LCR_cpy | LCR_PEN) & ~(LCR_EPS);
 			break;		
 		case 2:
-			LCR_cpy = LCR_cpy | LCR_PEN | LCR_STB;
+			LCR_cpy = LCR_cpy | LCR_PEN | LCR_EPS;
 			break;		
 	
 	}
