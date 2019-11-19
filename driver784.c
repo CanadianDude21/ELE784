@@ -9,20 +9,15 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 int serie_minor = 0;
 int nbr_dvc = 2;
-monModule device[2];
-//monModule device[nbr_dvc] = {{.SerialBaseAdd = SerialPort_Address_0,.SerialIRQnbr = SerialPort_IRQ_Address_0 },{.SerialBaseAdd = SerialPort_Address_1,.SerialIRQnbr = SerialPort_IRQ_Address_1}};
+
+monModule device[2] = {{.SerialBaseAdd = SerialPort_Address_0,.SerialIRQnbr = SerialPort_IRQ_Address_0 },{.SerialBaseAdd = SerialPort_Address_1,.SerialIRQnbr = SerialPort_IRQ_Address_1}};
 
 
 static int __init pilote_serie_init (void){
 	
 	int i;
 	int result;
-	
-	device[0].SerialBaseAdd = SerialPort_Address_0;
-	device[1].SerialBaseAdd = SerialPort_Address_1;
-	device[0].SerialIRQnbr = SerialPort_IRQ_Address_0; 
-	device[1].SerialIRQnbr = SerialPort_IRQ_Address_1;
-	
+
 	for(i = 0; i<nbr_dvc ; ++i){
 		device[i].wr_mod = 0;
 		device[i].rd_mod = 0;
@@ -31,7 +26,7 @@ static int __init pilote_serie_init (void){
 		init_buffer(200,&(device[i].Rxbuf));
 		init_waitqueue_head(&(device[i].waitRx));
 		init_waitqueue_head(&(device[i].waitTx));
-		
+		device[i].minor = i;
 		
 		if(request_region(device[i].SerialBaseAdd,nbr_registres, "pilote") == NULL){
 			printk(KERN_WARNING "Pilote: error with request region!");
@@ -48,7 +43,7 @@ static int __init pilote_serie_init (void){
 
 	}
 
-	result = alloc_chrdev_region(&device[0].dev,serie_minor,nbr_dvc,"PiloteSerie");
+	result = alloc_chrdev_region(&device[serie_minor].dev,serie_minor,nbr_dvc,"PiloteSerie");
 	if(result<0){
 		printk(KERN_WARNING "Pilote: can't get major!");
 		return -ENODEV;
@@ -56,10 +51,10 @@ static int __init pilote_serie_init (void){
 
 	device[0].cclass = class_create(THIS_MODULE, "PiloteSerie");
 	for(i = 0; i<nbr_dvc ; ++i){
-		device_create(device[0].cclass,NULL,device[0].dev +i,NULL,"SerialDev%d",i);
+		device_create(device[serie_minor].cclass,NULL,device[serie_minor].dev +i,NULL,"SerialDev%d",i);
 	}
-	cdev_init(&(device[0].mycdev), &monModule_fops);
-	cdev_add(&(device[0].mycdev), device[0].dev, nbr_dvc);
+	cdev_init(&(device[serie_minor].mycdev), &monModule_fops);
+	cdev_add(&(device[serie_minor].mycdev), device[serie_minor].dev, nbr_dvc);
 
 	printk(KERN_WARNING "Hello world!\n");
 	return 0;
@@ -68,13 +63,13 @@ static int __init pilote_serie_init (void){
 static void __exit pilote_serie_exit (void){
 	int i;
 
-	cdev_del(&(device[0].mycdev));
+	cdev_del(&(device[serie_minor].mycdev));
 	for(i = 0; i<nbr_dvc ; ++i){
-		device_destroy(device[0].cclass,device[0].dev+i);
+		device_destroy(device[serie_minor].cclass,device[serie_minor].dev+i);
 	}
 	
-	class_destroy(device[0].cclass);
-	unregister_chrdev_region(device[0].dev,nbr_dvc);
+	class_destroy(device[serie_minor].cclass);
+	unregister_chrdev_region(device[serie_minor].dev,nbr_dvc);
 	for(i = 0; i<nbr_dvc ; ++i){
 		free_irq(device[i].SerialIRQnbr, &(device[i]));
 		release_region(device[i].SerialBaseAdd,nbr_registres);

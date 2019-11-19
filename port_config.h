@@ -18,8 +18,8 @@
 #define SerialPort_Address_0 0xc030
 #define SerialPort_Address_1 0xc020
 
-#define SerialPort_IRQ_Address_0 21
-#define SerialPort_IRQ_Address_1 22
+#define SerialPort_IRQ_Address_0 20
+#define SerialPort_IRQ_Address_1 21
 
 #define nbr_registres 8
 
@@ -66,6 +66,7 @@ typedef struct{
 	uint32_t SerialBaseAdd;
 	uint32_t SerialIRQnbr;
 	spinlock_t acces_mod;
+	int minor;
 	
 }monModule;
 
