@@ -66,6 +66,7 @@ typedef struct{
 	uint32_t SerialBaseAdd;
 	uint32_t SerialIRQnbr;
 	spinlock_t acces_mod;
+	int minor;
 	
 }monModule;
 
