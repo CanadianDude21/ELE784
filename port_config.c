@@ -4,7 +4,7 @@ int transmission_enable[2];
 
 void init_port(monModule* module){
 	
-	uint64_t serial_add_copy;
+	uint32_t serial_add_copy;
 	uint8_t lcr_cpy;
 	uint8_t fcr_cpy;
 	uint8_t ier_cpy;
