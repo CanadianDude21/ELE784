@@ -32,8 +32,6 @@ void init_port(monModule* module){
 	transmission_enable[module->minor] = 0;
 
 
-
-
 	
 }
 
@@ -45,15 +43,17 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 	uint8_t LSR_cpy = inb((module->SerialBaseAdd + LSR));
 	uint8_t LCR_cpy = inb((module->SerialBaseAdd + LCR));
 		
-	printk(KERN_WARNING "interupt");	
+		
 
 	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE)){
 		
 		printk(KERN_WARNING "Pilote: error with LSR!");
+		return IRQ_HANDLED;
 
 	}
 	if(LSR_cpy & LSR_DR){
 		
+		printk(KERN_WARNING "read");
 		if(LCR_cpy & LCR_DLAB){	
 			outb((LCR_cpy & ~(LCR_DLAB)),(module->SerialBaseAdd + LCR));
 		}
@@ -62,10 +62,11 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 		write_buffer(RBR_cpy,&(module->Rxbuf));
 		spin_unlock(&(module->Rxbuf.buffer_lock));
 		wake_up_interruptible(&(module->waitRx));
-				
+		return IRQ_HANDLED;		
 	}
-	if(LSR_cpy & LSR_THRE){
+	else if(LSR_cpy & LSR_THRE){
 		
+		printk(KERN_WARNING "write");
 		if(LCR_cpy & LCR_DLAB){	
 			outb((LCR_cpy & ~(LCR_DLAB)),(module->SerialBaseAdd + LCR));
 		}
@@ -78,8 +79,9 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 		printk(KERN_WARNING"envoie : %d",THR_cpy);
 		outb(THR_cpy,(module->SerialBaseAdd));
 		wake_up_interruptible(&(module->waitTx));
+		return IRQ_HANDLED;
 	}
-	return IRQ_HANDLED;
+	return IRQ_NONE;
 
 }
 

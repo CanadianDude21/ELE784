@@ -70,8 +70,8 @@ static void __exit pilote_serie_exit (void){
 	class_destroy(device[serie_minor].cclass);
 	unregister_chrdev_region(device[serie_minor].dev,nbr_dvc);
 	for(i = 0; i<nbr_dvc ; ++i){
-		//free_irq(device[i].SerialIRQnbr, &(device[i]));
-		//release_region(device[i].SerialBaseAdd,nbr_registres);
+		free_irq(device[i].SerialIRQnbr, &(device[i]));
+		release_region(device[i].SerialBaseAdd,nbr_registres);
 		
 		kfree(device[i].Wxbuf.buffer);
 		kfree(device[i].Rxbuf.buffer);
@@ -172,8 +172,7 @@ ssize_t pilote_serie_read(struct file *filp, char *buf, size_t count, loff_t *f_
 		for(i=0;i<nb_a_transmettre;++i){
 			read_buffer(&BufR[i],&(module->Rxbuf));
 		}
-		spin_unlock(&(module->Rxbuf.buffer_lock));
-
+		spin_unlock_irq(&(module->Rxbuf.buffer_lock));	
 		if(copy_to_user(&buf[nb_data_read],BufR,i)){
 			printk(KERN_ALERT" Read error copy to user");
 			return -EAGAIN;
@@ -239,7 +238,7 @@ static ssize_t pilote_serie_write(struct file *filp, const char __user *buf, siz
 			write_buffer(BufW[i],&(module->Wxbuf));	
 		}
 		
-		spin_unlock(&(module->Wxbuf.buffer_lock));		
+		spin_unlock_irq(&(module->Wxbuf.buffer_lock));		
 		nb_data_write += nb_a_transmettre;
 		count -= nb_a_transmettre;
 	}
