@@ -15,6 +15,7 @@ void init_port(monModule* module){
 	SetParity(1, module);
 	
 	serial_add_copy = module->SerialBaseAdd;
+	
 
 	lcr_cpy = inb(serial_add_copy + LCR);
 	lcr_cpy = lcr_cpy  & ~(LCR_STB);
@@ -22,38 +23,41 @@ void init_port(monModule* module){
 
 	fcr_cpy = inb((serial_add_copy + FCR));
 	fcr_cpy = fcr_cpy | FCR_FIFOEN;
-	outb(lcr_cpy, (serial_add_copy + FCR));
+	outb(fcr_cpy, (serial_add_copy + FCR));
 	fcr_cpy = (fcr_cpy & ~(FCR_RCVRTRM) & ~(FCR_RCVRTRL)) | FCR_RCVRRE;
-	outb(lcr_cpy, (serial_add_copy + FCR));
-
+	outb(fcr_cpy, (serial_add_copy + FCR));
+	printk(KERN_WARNING"fcr : %d",lcr_cpy);
 	ier_cpy = inb((serial_add_copy + IER));
 	ier_cpy = (ier_cpy & ~(IER_ETBEI)) | IER_ERBFI;
 	outb(ier_cpy, (serial_add_copy + IER));
+	printk(KERN_WARNING"ier : %d",ier_cpy);
 	transmission_enable[module->minor] = 0;
+	
 
 
 	
 }
 
 extern irqreturn_t my_interrupt(int irq_no, void *arg){
-	
+	uint8_t ier_cpy;
 	uint8_t RBR_cpy;
 	uint8_t THR_cpy;	
 	monModule *module = (monModule*)arg; 
 	uint8_t LSR_cpy = inb((module->SerialBaseAdd + LSR));
 	uint8_t LCR_cpy = inb((module->SerialBaseAdd + LCR));
+	
 		
 		
 
-	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE)){
+//	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE)){
 		
-		printk(KERN_WARNING "Pilote: error with LSR!");
-		return IRQ_HANDLED;
+//		printk(KERN_WARNING "Pilote: error with LSR!");
+//		return IRQ_HANDLED;
 
-	}
-	if(LSR_cpy & LSR_DR){
-		
-		printk(KERN_WARNING "read");
+//	}
+	
+	if(LSR_cpy & LSR_DR && !((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE))){
+		//printk(KERN_WARNING"allo");
 		if(LCR_cpy & LCR_DLAB){	
 			outb((LCR_cpy & ~(LCR_DLAB)),(module->SerialBaseAdd + LCR));
 		}
@@ -62,9 +66,11 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 		write_buffer(RBR_cpy,&(module->Rxbuf));
 		spin_unlock(&(module->Rxbuf.buffer_lock));
 		wake_up_interruptible(&(module->waitRx));
+		LSR_cpy = inb((module->SerialBaseAdd + LSR));
+		
 		return IRQ_HANDLED;		
 	}
-	else if(LSR_cpy & LSR_THRE){
+	if(LSR_cpy & LSR_THRE && !((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE))){
 		
 		printk(KERN_WARNING "write");
 		if(LCR_cpy & LCR_DLAB){	
@@ -73,12 +79,18 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 	        spin_lock(&(module->Wxbuf.buffer_lock));
 		read_buffer(&THR_cpy,&(module->Wxbuf));
 		if(module->Wxbuf.nbElement == 0 && transmission_enable[module->minor] == 1){
-			change_ETBEI(0, module);
+			printk(KERN_WARNING "plus de place");
+			ier_cpy  = inb((module->SerialBaseAdd + IER));
+			ier_cpy = ier_cpy & ~(IER_ETBEI);
+			transmission_enable[module->minor] = 0;
+			outb(ier_cpy, (module->SerialBaseAdd + IER));
 		}
 		spin_unlock(&(module->Wxbuf.buffer_lock));
 		printk(KERN_WARNING"envoie : %d",THR_cpy);
 		outb(THR_cpy,(module->SerialBaseAdd));
 		wake_up_interruptible(&(module->waitTx));
+		ier_cpy  = inb((module->SerialBaseAdd + IER));
+		printk(KERN_WARNING"IER : %d",ier_cpy);
 		return IRQ_HANDLED;
 	}
 	return IRQ_NONE;

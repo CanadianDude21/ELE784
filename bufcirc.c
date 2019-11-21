@@ -6,7 +6,7 @@ void init_buffer(uint8_t size, buffer *buff){
 	buff->idIn = 0;
 	buff->idOut = 0;
 	buff->nbElement = 0;
-	buff->buffer= kmalloc(sizeof(uint8_t)*size, GFP_KERNEL);
+	buff->buffer= kmalloc(sizeof(uint8_t)*size, GFP_ATOMIC);
 	spin_lock_init(&(buff->buffer_lock));
 }
 
@@ -32,10 +32,10 @@ int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 	uint8_t *tempBufftx;
 	int i = 0;
 	int j = bufftx->idOut;
-
-	tempBufftx = kmalloc(sizeof(uint8_t)*newSize, GFP_KERNEL);
-	tempBuffrx = kmalloc(sizeof(uint8_t)*newSize, GFP_KERNEL);
-
+	
+	tempBufftx = kmalloc(sizeof(uint8_t)*newSize, GFP_ATOMIC);
+	tempBuffrx = kmalloc(sizeof(uint8_t)*newSize, GFP_ATOMIC);
+	
 	if(buffrx->nbElement > newSize || bufftx->nbElement > newSize){
 		return -EAGAIN;	
 	}
@@ -49,8 +49,9 @@ int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 	bufftx->idOut = 0;
 	bufftx->idIn = i;
 	bufftx->size = newSize;
-
+	
 	i = 0;
+	
 	j = buffrx->idOut;
 	while(j != buffrx->idIn){
 		tempBuffrx[i] = buffrx->buffer[j];

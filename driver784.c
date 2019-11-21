@@ -85,6 +85,7 @@ int pilote_serie_open(struct inode *inode,struct file *filp){
 	int minor = iminor(inode);
 	filp->private_data = &device[minor];
 	printk(KERN_ALERT"Pilote Opened!\n");
+
 	spin_lock(&(device[minor].acces_mod));
 	if(device[minor].wr_mod == 1){
 		spin_unlock(&(device[minor].acces_mod));
@@ -266,19 +267,36 @@ long pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	switch(cmd){
 		
 	case SET_BAUD_RATE:
-		SetBaudRate((int)arg, module);
+		if((int)arg > 115200 || (int)arg < 50){
+			retval = -ENOTTY;		
+		}
+		else{
+			SetBaudRate((int)arg, module);
+		}	
 		break;
 	case SET_DATA_SIZE:
-		SetDataSize((int)arg, module);
+		if((int)arg > 8 || (int)arg < 5){
+			retval = -ENOTTY;		
+		}
+		else{
+			SetDataSize((int)arg, module);
+		}
 		break;
 	case SET_PARITY:
-		SetParity((int)arg, module);
+		if((int)arg > 2 || (int)arg < 0){
+			retval = -ENOTTY;		
+		}
+		else{
+			SetParity((int)arg, module);
+		}
 		break;
 	case GET_BUF_SIZE:
-		retval = get_buffer_size(&(module->Wxbuf));
+		retval = (long)get_buffer_size(&(module->Wxbuf));
 		break;
 	case SET_BUF_SIZE:
-		retval = resize_buffer(&(module->Rxbuf),&(module->Wxbuf),arg);
+		spin_lock_irq(&(module->Wxbuf.buffer_lock));
+		retval = resize_buffer(&(module->Rxbuf),&(module->Wxbuf),(int)arg);
+		spin_unlock_irq(&(module->Wxbuf.buffer_lock));
 		break;
 	default:
 		return -EAGAIN;
