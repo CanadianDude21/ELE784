@@ -100,10 +100,12 @@ int pilote_serie_open(struct inode *inode,struct file *filp){
 	}
 	if((filp->f_flags & O_ACCMODE) == O_RDONLY){
 		device[minor].rd_mod=1;
+		change_ERBFI(1,&(device[minor]));
 	}
 	if((filp->f_flags & O_ACCMODE) ==O_RDWR){
 		device[minor].wr_mod=1;
 		device[minor].rd_mod=1;
+		change_ERBFI(1,&(device[minor]));
 	}
 	spin_unlock(&(device[minor].acces_mod));
 	return 0;
@@ -118,10 +120,12 @@ static int pilote_serie_release(struct inode *inode,struct file *filp){
 	}
 	if((filp->f_flags & O_ACCMODE) == O_RDONLY){
 		device[minor].rd_mod=0;
+		change_ERBFI(0,&(device[minor]));
 	}
-	if((filp->f_flags & O_ACCMODE) ==O_RDWR){
+	if((filp->f_flags & O_ACCMODE) == O_RDWR){
 		device[minor].wr_mod=0;
 		device[minor].rd_mod=0;
+		change_ERBFI(0,&(device[minor]));
 	}
 	spin_unlock(&(device[minor].acces_mod));
 	printk(KERN_ALERT"Pilote Released!\n");
@@ -294,6 +298,10 @@ long pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 		retval = (long)get_buffer_size(&(module->Wxbuf));
 		break;
 	case SET_BUF_SIZE:
+		if(!(capable(CAP_SYS_ADMIN))){
+			printk(KERN_WARNING"Error: User does not have permission\n");
+			return -EPERM;
+		}
 		spin_lock_irq(&(module->Wxbuf.buffer_lock));
 		retval = resize_buffer(&(module->Rxbuf),&(module->Wxbuf),(int)arg);
 		spin_unlock_irq(&(module->Wxbuf.buffer_lock));

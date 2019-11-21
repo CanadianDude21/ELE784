@@ -77,3 +77,4 @@ void SetParity(int parity, monModule* module);
 void SetDataSize(int size, monModule* module);
 void SetBaudRate(int baud_rate, monModule* module);
 void change_ETBEI(int enable, monModule* module);
+void change_ERBFI(int enable, monModule* module);
