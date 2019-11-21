@@ -54,5 +54,6 @@ Notes
 -L'écriture semble fonctionner sans problèmes dans la routine d'interruption
 -La réception est souvent déclancher mais le registre de réception est vide
 -La réception fonctionne dans les premières exécutions mais il y a beaucoup de corruption après ces exécutions
+-Pour SetBufSize nous avons mis la condition de permission mais nous ne savions pas si nous avions les droits d'administrateur. Donc si vous obtenez une erreur, commentez la vérification de permission.
 
 ==================================================================
