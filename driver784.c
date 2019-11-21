@@ -294,6 +294,10 @@ long pilote_serie_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 		retval = (long)get_buffer_size(&(module->Wxbuf));
 		break;
 	case SET_BUF_SIZE:
+		if(!(capable(CAP_SYS_ADMIN))){
+			printk(KERN_WARNING"Error: User does not have permission\n");
+			return -EPERM;
+		}
 		spin_lock_irq(&(module->Wxbuf.buffer_lock));
 		retval = resize_buffer(&(module->Rxbuf),&(module->Wxbuf),(int)arg);
 		spin_unlock_irq(&(module->Wxbuf.buffer_lock));
