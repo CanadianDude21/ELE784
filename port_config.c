@@ -7,7 +7,6 @@ void init_port(monModule* module){
 	uint32_t serial_add_copy;
 	uint8_t lcr_cpy;
 	uint8_t fcr_cpy;
-	uint8_t ier_cpy;
 
 
 	SetBaudRate(9600, module);
@@ -27,11 +26,8 @@ void init_port(monModule* module){
 	fcr_cpy = (fcr_cpy & ~(FCR_RCVRTRM) & ~(FCR_RCVRTRL)) | FCR_RCVRRE;
 	outb(fcr_cpy, (serial_add_copy + FCR));
 	printk(KERN_WARNING"fcr : %d",lcr_cpy);
-	ier_cpy = inb((serial_add_copy + IER));
-	ier_cpy = (ier_cpy & ~(IER_ETBEI)) | IER_ERBFI;
-	outb(ier_cpy, (serial_add_copy + IER));
-	printk(KERN_WARNING"ier : %d",ier_cpy);
-	transmission_enable[module->minor] = 0;
+	change_ETBEI(0,module);
+	change_ERBFI(0,module);
 	
 
 
@@ -49,15 +45,15 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 		
 		
 
-//	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE)){
+	if((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE)){
 		
-//		printk(KERN_WARNING "Pilote: error with LSR!");
-//		return IRQ_HANDLED;
+		printk(KERN_WARNING "Pilote: error with LSR! %d",LSR_cpy);
+		return IRQ_HANDLED;
 
-//	}
-	
-	if(LSR_cpy & LSR_DR && !((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE))){
-		//printk(KERN_WARNING"allo");
+	}
+	if(LSR_cpy & LSR_DR){
+	//if(LSR_cpy & LSR_DR && !((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE))){
+		printk(KERN_WARNING "read");
 		if(LCR_cpy & LCR_DLAB){	
 			outb((LCR_cpy & ~(LCR_DLAB)),(module->SerialBaseAdd + LCR));
 		}
@@ -70,7 +66,8 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 		
 		return IRQ_HANDLED;		
 	}
-	if(LSR_cpy & LSR_THRE && !((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE))){
+	if(LSR_cpy & LSR_THRE){
+	//if(LSR_cpy & LSR_THRE && !((LSR_cpy & LSR_FE) || (LSR_cpy & LSR_PE) || (LSR_cpy & LSR_OE))){
 		
 		printk(KERN_WARNING "write");
 		if(LCR_cpy & LCR_DLAB){	
@@ -190,5 +187,20 @@ void change_ETBEI(int enable, monModule* module){
 
 }
 
+void change_ERBFI(int enable, monModule* module){
 
+	uint8_t ier_cpy = inb((module->SerialBaseAdd + IER));
+	printk(KERN_WARNING "change receive mode");
+	if(enable){
+		ier_cpy = ier_cpy | (IER_ERBFI);
+		transmission_enable[module->minor] = 1;
+	}
+	else{
+		ier_cpy = ier_cpy & ~(IER_ERBFI);
+		transmission_enable[module->minor] = 0;
+	}
+
+	outb(ier_cpy, (module->SerialBaseAdd + IER));
+
+}
 
