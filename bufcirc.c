@@ -1,3 +1,12 @@
+/*
+ ============================================================================
+ Nom         : bufcirc.c
+ Author      : Samuel Pesant et Mathieu Fournier-Desrochers
+ Date 	     : 22-10-2019
+ Description : Toute les fonction utilie à l'utilisation d'un buffer circulaire
+ ============================================================================
+ */
+
 #include "bufcirc.h"
 
 void init_buffer(uint8_t size, buffer *buff){

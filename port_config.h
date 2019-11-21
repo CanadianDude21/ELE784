@@ -1,6 +1,14 @@
+/*
+ ============================================================================
+ Nom         : port_config.h
+ Author      : Samuel Pesant et Mathieu Fournier-Desrochers
+ Date 	     : 22-10-2019
+ Description : Déclare les registres et les bits du port série
+ ============================================================================
+ */
+
 #include <linux/module.h>
 #include <linux/init.h>
-
 #include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/kdev_t.h>
@@ -15,14 +23,18 @@
 #include <linux/interrupt.h>
 #include "bufcirc.h"
 
+//Adresse portIO des ports séries
 #define SerialPort_Address_0 0xc030
 #define SerialPort_Address_1 0xc020
 
+//Numéros d'interruption du port série
 #define SerialPort_IRQ_Address_0 20
 #define SerialPort_IRQ_Address_1 21
 
+
 #define nbr_registres 8
 
+//utile au BaudRates
 #define f_clk 1843200
 
 
@@ -54,6 +66,8 @@
 #define LSR_THRE         0x20
 #define LSR_TEMT         0x40
 
+
+//Déclaration de la structure personnel utile à chaque instance de pilote
 typedef struct{
 	dev_t dev;
 	struct class *cclass;
