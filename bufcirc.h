@@ -1,6 +1,16 @@
+/*
+ ============================================================================
+ Nom         : bufcirc.h
+ Author      : Samuel Pesant et Mathieu Fournier-Desrochers
+ Date 	     : 22-10-2019
+ Description : Déclaration des fonctions et la structure
+ ============================================================================
+ */
+
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 
+//strucuture du buffer circulaire
 typedef struct {
 	uint8_t *buffer;
 	uint8_t size;
