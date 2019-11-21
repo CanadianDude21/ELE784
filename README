@@ -1,0 +1,34 @@
+******************************************************************
+Pilote Série
+******************************************************************
+
+driver784:
+
+	Contient toutes les fonctions de la structure du pilote AKA init,exit,open,release et IOCTL
+	Le header contient la structure de file operations
+	Le IOCTL offre les fonctions suivantes: SetBaudRate, SetDataSize, SetParity, GetBufSize, SetBufSize
+
+port_config:
+
+	Toute les fonctions concernant le matériel du port série et la routine d'interruption. 
+	Le header contient les définitions des registres ainsi que la structure du pilote.
+
+bufcirc:
+
+	Toute les fonctions concernant l'écriture et la lecture dans les buffer circulaires et la fonction qui resize le buffer
+	Le header déclare la structure de buffer
+
+cmdioctl:
+
+Définis les numéros de commande du IOCTL
+
+==================================================================
+
+******************************************************************
+Application 
+******************************************************************
+
+AppUsager:
+
+
+******************************************************************
