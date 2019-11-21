@@ -18,9 +18,9 @@
 				 pointeur sur la structure
 
 	Return     : void
-*/
+ */
 void init_buffer(uint8_t size, buffer *buff){
-	
+
 	//initialisation de chaque élément de la structure
 	buff->size = size;
 	buff->idIn = 0;
@@ -40,13 +40,13 @@ void init_buffer(uint8_t size, buffer *buff){
 				 pointeur sur le buffer
 
 	Return     : void
-*/
+ */
 void read_buffer(uint8_t* tempo, buffer *buff){
 	//prendre la valeur et ajuster les indices et la nombre d'élément
 	*tempo = buff->buffer[buff->idOut];
 	buff->idOut = (buff->idOut + 1)%buff->size;
 	buff->nbElement--;	
-		
+
 }
 //*************************************************************************************
 
@@ -60,13 +60,13 @@ void read_buffer(uint8_t* tempo, buffer *buff){
 				 pointeur sur le buffer
 
 	Return     : void
-*/
+ */
 void write_buffer(uint8_t tempo, buffer *buff){
 	//placer la valeur et ajuster les indices et la nombre d'élément
 	buff->buffer[buff->idIn] = tempo;
 	buff->idIn = (buff->idIn + 1)%buff->size;
 	buff->nbElement++;	
-		
+
 }
 //*************************************************************************************
 
@@ -81,14 +81,14 @@ void write_buffer(uint8_t tempo, buffer *buff){
 				 Nouvelle taille
 
 	Return     : 0 quand réussi et -EAGAIN pour erreur
-*/
+ */
 int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 
 	uint8_t *tempBuffrx;
 	uint8_t *tempBufftx;
 	int i = 0;
 	int j = bufftx->idOut;
-	
+
 	//ici on devrait prendre le Spinlock mais nous avons jamais été en mesure
 	//de réussir la fonction avec le spin lock (crash)
 
@@ -100,7 +100,7 @@ int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 	//création des deux nouveau buffers
 	tempBufftx = kmalloc(sizeof(uint8_t)*newSize, GFP_ATOMIC);
 	tempBuffrx = kmalloc(sizeof(uint8_t)*newSize, GFP_ATOMIC);
-	
+
 	//copie des valeur du buffer dans le nouveau
 	while(j != bufftx->idIn){
 		tempBufftx[i] = bufftx->buffer[j];
@@ -113,10 +113,10 @@ int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 	bufftx->idOut = 0;
 	bufftx->idIn = i;
 	bufftx->size = newSize;
-	
+
 	i = 0;
 	j = buffrx->idOut;
-	
+
 	//copie des valeur du buffer dans le nouveau
 	while(j != buffrx->idIn){
 		tempBuffrx[i] = buffrx->buffer[j];
@@ -129,9 +129,9 @@ int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 	buffrx->idOut = 0;
 	buffrx->idIn = i;
 	buffrx->size = newSize;
-	
+
 	return 0;
-	
+
 }
 //*************************************************************************************
 
@@ -143,7 +143,7 @@ int resize_buffer(buffer *buffrx, buffer *bufftx, size_t newSize){
 
 
 	Return     : la grandeur
-*/
+ */
 int get_buffer_size(buffer *buff){
 
 	return (int)(buff->size);

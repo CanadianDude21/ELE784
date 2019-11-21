@@ -9,6 +9,7 @@
 
 
 #include "port_config.h"
+#include <asm/barrier.h>
 
 //un variable qui maintient l'état de la transmission
 int transmission_enable[2];
@@ -22,27 +23,30 @@ int transmission_enable[2];
 	Paramètres : structure monModule qui permet d'identifier le port
 
 	Return     : void
-*/
+ */
 void init_port(monModule* module){
 
 	uint8_t lcr_cpy;
 	uint8_t fcr_cpy = 0;
 
-	
+
 	SetBaudRate(115200, module); //initialise le baudrate 115200
 	SetDataSize(8, module); //initialise la taille de donnée à 8 bits
 	SetParity(2, module); //initialise la parité pair
 
 	//met 1 bit d'arrêt
 	lcr_cpy = inb(module->SerialBaseAdd + LCR);
+	rmb();
 	lcr_cpy = lcr_cpy  & ~(LCR_STB);
 	outb(lcr_cpy, module->SerialBaseAdd + LCR);
+	wmb();
 
 	//initialise le registre fcr pour controler la fifo
 	fcr_cpy = fcr_cpy | FCR_FIFOEN;
 	outb(fcr_cpy, (module->SerialBaseAdd + FCR));
 	fcr_cpy = (fcr_cpy & ~(FCR_RCVRTRM) & ~(FCR_RCVRTRL)) | FCR_RCVRRE | FCR_FIFOEN;
 	outb(fcr_cpy, (module->SerialBaseAdd + FCR));
+	wmb();
 
 	change_ETBEI(0,module); //désactive l'interruption de transmission
 	change_ERBFI(0,module); //désactive l'interruption de Réception
@@ -61,25 +65,31 @@ void init_port(monModule* module){
 				 arg : pointeur sur notre structure de donnée.
 
 	Return     : Irqreturn None ou handled
-*/
+ */
 extern irqreturn_t my_interrupt(int irq_no, void *arg){
 	uint8_t ier_cpy;
 	uint8_t RBR_cpy;
-	uint8_t THR_cpy;	
+	uint8_t THR_cpy;
+	uint8_t LSR_cpy;
+	uint8_t LCR_cpy;	
 	monModule *module = (monModule*)arg;
 
 	//lire la valeur de LSR et LCR
-	uint8_t LSR_cpy = inb((module->SerialBaseAdd + LSR));
-	uint8_t LCR_cpy = inb((module->SerialBaseAdd + LCR));
+	LSR_cpy = inb((module->SerialBaseAdd + LSR));
+	rmb();
+	LCR_cpy = inb((module->SerialBaseAdd + LCR));
+	rmb();
 
 	//Si l'interruption est déclanché par une donnée prêt à être lu.
 	if(LSR_cpy & LSR_DR){
 		//s'assurer que DLAB est 0
 		if(LCR_cpy & LCR_DLAB){	
 			outb((LCR_cpy & ~(LCR_DLAB)),(module->SerialBaseAdd + LCR));
+			wmb();
 		}
 		//lecture de la donnée
 		RBR_cpy = inb((module->SerialBaseAdd));
+		rmb();
 
 		//vérifie qu'elle n'est pas null (pas supposé être nécessaire,
 		// mais plein d'interruption sont levé pour aucune raison en read
@@ -98,6 +108,7 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 		//s'assurer que DLAB est 0
 		if(LCR_cpy & LCR_DLAB){	
 			outb((LCR_cpy & ~(LCR_DLAB)),(module->SerialBaseAdd + LCR));
+			wmb();
 		}
 		//capture le spin lock
 		spin_lock(&(module->Wxbuf.buffer_lock));
@@ -106,8 +117,10 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 			//plus de donnée, on désactive la transmission.
 			spin_unlock(&(module->Wxbuf.buffer_lock));
 			ier_cpy  = inb((module->SerialBaseAdd + IER));
+			rmb();
 			ier_cpy = ier_cpy & ~(IER_ETBEI);
 			outb(ier_cpy, (module->SerialBaseAdd + IER));
+			wmb();
 			transmission_enable[module->minor] = 0;
 		}
 		else{
@@ -116,6 +129,7 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 			read_buffer(&THR_cpy,&(module->Wxbuf));	
 			spin_unlock(&(module->Wxbuf.buffer_lock));
 			outb(THR_cpy,(module->SerialBaseAdd));
+			wmb();
 			wake_up_interruptible(&(module->waitTx)); //Réveil la file d'attente en écriture
 		}
 
@@ -134,7 +148,7 @@ extern irqreturn_t my_interrupt(int irq_no, void *arg){
 				 Strcuture module pour connaître le port
 
 	Return     : void
-*/
+ */
 void SetBaudRate(int baud_rate, monModule* module){
 
 	uint8_t dl_LSB;
@@ -142,8 +156,10 @@ void SetBaudRate(int baud_rate, monModule* module){
 	uint16_t dl_cpy;
 	//s'assure que DLAB est à 1
 	uint8_t lcr_cpy = inb((module->SerialBaseAdd + LCR));
+	rmb();
 	lcr_cpy = lcr_cpy | LCR_DLAB;
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
+	wmb();
 
 	//Calcule de la valeur du registre en fonction du BaudRate
 	dl_cpy = f_clk/ (baud_rate*16);
@@ -152,11 +168,14 @@ void SetBaudRate(int baud_rate, monModule* module){
 	dl_MSB = (uint8_t)(dl_cpy & 0xf0);
 	//Écriture dans les registres
 	outb(dl_LSB, (module->SerialBaseAdd + DL));
+	wmb();
 	outb(dl_MSB, (module->SerialBaseAdd + DL + 0x01));
+	wmb();
 
 	//Remet le DLAB à 0
 	lcr_cpy = lcr_cpy & ~(LCR_DLAB);
 	outb(lcr_cpy, (module->SerialBaseAdd + LCR));
+	wmb();
 
 }
 //*************************************************************************************
@@ -170,11 +189,12 @@ void SetBaudRate(int baud_rate, monModule* module){
 				 Strcuture module pour connaître le port
 
 	Return     : void
-*/
+ */
 void SetDataSize(int size, monModule* module){
 
 	//lecture du registre
 	uint8_t LCR_cpy = inb((module->SerialBaseAdd + LCR));
+	rmb();
 
 	// Inscrire la bonne valeurs dans le registres selon la taille demandé.
 	switch(size){
@@ -194,6 +214,7 @@ void SetDataSize(int size, monModule* module){
 	}
 	//Écriture du dans le registre
 	outb(LCR_cpy, (module->SerialBaseAdd + LCR));
+	wmb();
 
 }
 //*************************************************************************************
@@ -209,12 +230,12 @@ void SetDataSize(int size, monModule* module){
 				 Strcuture module pour connaître le port
 
 	Return     : void
-*/
+ */
 void SetParity(int parity, monModule* module){
 
 	//lecture du registre
 	uint8_t LCR_cpy = inb((module->SerialBaseAdd + LCR));
-
+	rmb();
 	// Inscrire la bonne valeurs dans le registres selon la parité.
 	switch(parity){
 
@@ -231,6 +252,7 @@ void SetParity(int parity, monModule* module){
 	}
 	//Écriture du dans le registre
 	outb(LCR_cpy, (module->SerialBaseAdd + LCR));
+	wmb();
 
 }
 //*************************************************************************************
@@ -244,11 +266,11 @@ void SetParity(int parity, monModule* module){
 				 Strcuture module pour connaître le port
 
 	Return     : void
-*/
+ */
 void change_ETBEI(int enable, monModule* module){
 	//lecture du registre
 	uint8_t ier_cpy = inb((module->SerialBaseAdd + IER));
-
+	rmb();
 	//changer le bit en fonction du paramètre
 	if(enable){
 		ier_cpy = ier_cpy | (IER_ETBEI);
@@ -260,6 +282,7 @@ void change_ETBEI(int enable, monModule* module){
 	}
 	//écriture du registre
 	outb(ier_cpy, (module->SerialBaseAdd + IER));
+	wmb();
 
 }
 //*************************************************************************************
@@ -273,11 +296,11 @@ void change_ETBEI(int enable, monModule* module){
 				 Strcuture module pour connaître le port
 
 	Return     : void
-*/
+ */
 void change_ERBFI(int enable, monModule* module){
 	//lecture du registre
 	uint8_t ier_cpy = inb((module->SerialBaseAdd + IER));
-
+	rmb();
 	//changer le bit en fonction du paramètre
 	if(enable){
 		ier_cpy = ier_cpy | (IER_ERBFI);
@@ -287,6 +310,7 @@ void change_ERBFI(int enable, monModule* module){
 	}
 	//écriture du registre
 	outb(ier_cpy, (module->SerialBaseAdd + IER));
+	wmb();
 
 }
 //*************************************************************************************
