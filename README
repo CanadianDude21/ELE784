@@ -24,11 +24,35 @@ Définis les numéros de commande du IOCTL
 
 ==================================================================
 
+
+
+
+
+
+
+
 ******************************************************************
 Application 
 ******************************************************************
 
 AppUsager:
+	Suivre les indications du programme dans la console
+
+
+==================================================================
+
+
+
+
+
 
 
 ******************************************************************
+Notes
+******************************************************************
+-Il y a énormément d'interuptions déclanchées et lorsqu'on lit le registre LSR, les trois bits de RECV ERRORS sont toujours à 1
+-L'écriture semble fonctionner sans problèmes dans la routine d'interruption
+-La réception est souvent déclancher mais le registre de réception est vide
+-La réception fonctionne dans les premières exécutions mais il y a beaucoup de corruption après ces exécutions
+
+==================================================================
