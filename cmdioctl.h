@@ -1,3 +1,12 @@
+/*
+ ============================================================================
+ Nom         : cmdioctl.h
+ Author      : Samuel Pesant et Mathieu Fournier-Desrochers
+ Date 	     : 22-10-2019
+ Description : Déclaration des commandes de IOCTL
+ ============================================================================
+ */
+
 #include <asm/ioctl.h>
 
 #define MAGIC_NUMBER_PILOTE 'Z'
