@@ -187,11 +187,9 @@ void change_ERBFI(int enable, monModule* module){
 	printk(KERN_WARNING "change receive mode");
 	if(enable){
 		ier_cpy = ier_cpy | (IER_ERBFI);
-		transmission_enable[module->minor] = 1;
 	}
 	else{
 		ier_cpy = ier_cpy & ~(IER_ERBFI);
-		transmission_enable[module->minor] = 0;
 	}
 
 	outb(ier_cpy, (module->SerialBaseAdd + IER));
