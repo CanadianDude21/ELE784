@@ -1,3 +1,11 @@
+/*
+ ============================================================================
+ Nom         : driver784.h
+ Author      : Samuel Pesant et Mathieu Fournier-Desrochers
+ Date 	     : 22-10-2019
+ Description : Prototypes de fonctions du pilote série
+ ============================================================================
+ */
 #include <generated/autoconf.h>
 #include <linux/module.h>
 #include <linux/init.h>

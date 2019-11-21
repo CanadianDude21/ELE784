@@ -1,3 +1,12 @@
+/*
+ ============================================================================
+ Nom         : driver784.c
+ Author      : Samuel Pesant et Mathieu Fournier-Desrochers
+ Date 	     : 22-10-2019
+ Description : Fonctions du pilote série
+ ============================================================================
+ */
+
 #include "driver784.h"
 
 
